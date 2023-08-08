@@ -1,6 +1,4 @@
-from textual.app import App, ComposeResult
-from textual.containers import Container, Horizontal, VerticalScroll, ListView, ListItem
-from textual.widgets import Header, Static
+import os
 from controller import sheets
 
 
@@ -13,7 +11,8 @@ class py_notes():
     def get_status(self) -> None:
         print(f'Текущее количество записей: {self._nb.records_num}')
 
-    def show_menu():
+    def show_menu(self):
+        self.cls()
         print('''
         1. Добавить запись
         2. Просмотреть все записи
@@ -27,3 +26,9 @@ class py_notes():
         ''')
 
         None
+
+    def cls() -> None:
+        os.system('cls' if os.name == 'nt' else 'clear')
+
+
+py_notes().show_menu()
