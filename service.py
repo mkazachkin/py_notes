@@ -1,27 +1,22 @@
 import uuid
 import datetime
-from model import note as note
+from model import note
 
 
-def save_csv(sheets: list, path: str) -> bool:
+def save_csv(sheets: list[note], path: str) -> bool:
     '''
     Сохраняет данные из блокнота в csv файл.
     Аргументы:
         sheets: list    - блокнот
         path: str       - путь к файлу
     '''
+    if len(sheets) == 0:
+        return False
     result: str = ''
+    result += '\t'.join(sheets[0].get_header()) + '\n'
     for sheet in sheets:
-        result += sheet.note_id
-        result += '\t'
-        result += sheet.note_created
-        result += '\t'
-        result += sheet.note_modified
-        result += '\t'
-        result += escape_str(sheet.note_title)
-        result += '\t'
-        result += escape_str(sheet.note_text)
-        result += '\n'
+        result += '\t'. \
+            join(escape_str(item) for item in sheet.get_list()) + '\n'
     try:
         with open(path, 'w') as csv_file:
             csv_file.write(result)
@@ -45,7 +40,7 @@ def load_csv(path: str) -> list:
         return list()
 
     rows: list = csv.split('\n')
-    for row in rows:
+    for row in rows[1:]:
         note_items = row.split('\t')
         if len(note_items) != 5:
             return list()

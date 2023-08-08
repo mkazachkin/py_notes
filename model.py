@@ -1,96 +1,47 @@
 import uuid
-import datetime as dt
-from typing import Type
+import datetime
 
 
-class note ():
-    __slots__ = ['_note']
+class sheets ():
+    __slots__ = ['_header', '_sheets']
 
     def __init__(self, **kwargs) -> None:
         '''
-        Класс записи в блокноте.
+        Класс страниц блокнота.
 
         Аргументы конструктора:
-            id: UUID            - идентификатор
-            created: datetime   - дата создания записии
-            modified: datetime  - дата изменения записи
-            title: str          - заголовок записи
-            text: str           - текст записи
+            sheets: list    - список записей вместе с id
         '''
-        self._note = dict()
-        self._note['id']: uuid.UUID = kwargs.get('id', uuid.uuid4())
-        self._note['created']: dt.datetime = kwargs.get(
-            'created', dt.datetime.now())
-        self._note['modified']: dt.datetime = kwargs.get(
-            'modified', self._note['created'])
-        self._note['title']: str = kwargs.get('title', '')
-        self._note['text']: str = kwargs.get('text', '')
+        self._header = {'created': 0, 'modified': 1, 'title': 2, 'text': 3}
+        self._sheets = dict()
+        if 'sheets' in kwargs:
+            for sheet in kwargs.get('sheets'):
+                self._note[sheet[0]: sheet[1:]]
+        self._sort_sheets()
 
-    def __str__(self):
-        result = ''
-        for key, val in self._note.items():
-            result += f'{key}: {val} \n'
-        return result
+    def add(self, title: str, text: str) -> None:
+        _time = datetime.datetime.now().timestamp()
+        self._sheets[uuid.uuid4().int] = [_time, _time, title, text]
 
-    @property
-    def note_id(self) -> uuid.UUID:
-        '''
-        Возвращает id записи
-        '''
-        return self._note['id']
+    def mod(self, id: int, title: str, text: str) -> None:
+        _time = datetime.datetime.now().timestamp()
+        self._sheets[id] = [self._sheets[id][0], _time, title, text]
+        self._sort_sheets()
 
-    @property
-    def note_created(self) -> dt.datetime:
-        '''
-        Возвращает дату создания записи
-        '''
-        return self._note['date_created']
+    def rem(self, id: int) -> None:
+        del self._sheets[id]
+        self._sort_sheets()
 
-    @property
-    def note_modified(self) -> dt.datetime:
-        '''
-        Возвращает дату модификации записи
-        '''
-        return self._note['date_modified']
+    def get(self) -> dict:
+        return self._sheets
 
-    @property
-    def note_title(self) -> str:
-        '''
-        Возвращает заголовок записи
-        '''
-        return self._note['title']
+    def head(self) -> list:
+        return self._header.keys()
 
-    @note_title.setter
-    def note_text(self, note_title: str) -> None:
-        '''
-        Меняет заголовок записи
-        '''
-        self._note['title'] = note_title
-        self._note['date_modified'] = dt.datetime.now()
-
-    @property
-    def note_text(self) -> str:
-        '''
-        Возвращает текст записи
-        '''
-        return self._note['text']
-
-    @note_text.setter
-    def note_text(self, note_text: str) -> None:
-        '''
-        Меняет текст записи
-        '''
-        self._note['text'] = note_text
-        self._note['date_modified'] = dt.datetime.now()
-
-    def to_list(self) -> list:
-        '''
-        Возвращает запись в виде списка
-        '''
-        return self._note.values()
-
-    def to_dict(self) -> dict:
-        '''
-        Возвращает запись в виде словаря
-        '''
-        return self._note
+    def _sort_sheets(self, column: str = 'created') -> None:
+        col: int = 0
+        if column in self._header.keys():
+            col = self._header[column]
+        self._sheets = {key: val for key, val in
+                        sorted(self._sheets.items(),
+                               key=lambda rec: rec[1][col])}

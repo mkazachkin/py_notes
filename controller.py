@@ -1,48 +1,66 @@
-from model import note
+from model import sheets
 from service import save_csv, load_csv
+import datetime
 
 
-class sheets():
+class notebook():
     __slots__ = ['_sheets']
 
-    def __init__(self, **kwargs) -> None:
+    def __init__(self) -> None:
         '''
         Класс блокнота.
-
-        Аргументы конструктора:
-            sheets: note    - список записей
         '''
-        self._sheets: list[note] = kwargs.get('sheets', list())
+        self._nb: sheets = sheets()
 
-    def push(self, text_note: note) -> None:
+    def add_sheet(self, title: str, text: str) -> None:
         '''
         Добавляет запись
         '''
-        self._sheets.append(text_note)
+        self._nb.add(title, text)
 
-    def pop(self, idx=-1) -> note:
+    def update_sheet(self, id: int, title: str, text: str) -> None:
         '''
-        Удаляет и возвращает запись по указанному индексу. По-умочанию, последнюю.
+        Изменяет запись по id.
         '''
-        return self._sheets.pop(idx)
+        self._nb.mod(id, title, text)
 
-    def get(self, idx=-1) -> note:
+    def remove_sheet(self, id: int) -> None:
         '''
-        Возвращает запись по указанному индексу. По-умолчанию, последнюю.
+        Удаляет запись по id.
         '''
-        return self._sheets[idx]
+        self._nb.rem(id)
 
-    def get_all(self) -> list[note]:
-        '''
-        Возвращает все записи блокнота
-        '''
-        return self._sheets
-
-    def clear(self):
-        '''
-        Очищает блокнот.
-        '''
-        self._sheets.clear()
+    def select_sheets(self, **kwargs) -> dict:
+        result = dict(self._nb)
+        if 'ids' in kwargs:
+            result = {ids: result[ids]
+                      for ids in kwargs.get('ids')
+                      if ids in result.keys()}
+        flag: bool = False
+        first_date: float = 0.0
+        last_date: float = datetime.datetime.now().timestamp()
+        if 'created_first' in kwargs:
+            try:
+                first_date = datetime.datetime.\
+                    strptime(kwargs.get('created_first'),
+                             '%Y-%m-%d').timestamp()
+                flag = True
+            except ValueError:
+                return dict()
+        if 'created_last' in kwargs:
+            try:
+                last_date = datetime.datetime.\
+                    strptime(kwargs.get('created_last'),
+                             '%Y-%m-%d').timestamp()
+                flag = True
+            except ValueError:
+                return dict()
+        if flag:
+            result = {ids: result[ids]
+                      for ids in result.keys()
+                      if result[ids][0] >= first_date
+                      and result[ids][0] <= last_date}
+        return result
 
     def load_csv(self, path: str) -> bool:
         '''
@@ -69,15 +87,3 @@ class sheets():
             path: str       - путь к файлу
         '''
         return save_csv(self._sheets, path)
-
-    def load_json(path: str) -> None:
-        None
-
-    def save_json(path: str) -> None:
-        None
-
-    def records_num(self) -> bool:
-        '''
-        Возвращает True, если блокнот пустой.
-        '''
-        return len(self._sheets)
