@@ -1,22 +1,19 @@
-import uuid
-import datetime
-from model import note
+_SPLITTER = '\t'
 
 
-def save_csv(sheets: list[note], path: str) -> bool:
+def save_csv(sheets: list, path: str) -> bool:
     '''
     Сохраняет данные из блокнота в csv файл.
     Аргументы:
         sheets: list    - блокнот
         path: str       - путь к файлу
     '''
-    if len(sheets) == 0:
+    if len(sheets) < 2:
         return False
     result: str = ''
-    result += '\t'.join(sheets[0].get_header()) + '\n'
     for sheet in sheets:
-        result += '\t'. \
-            join(escape_str(item) for item in sheet.get_list()) + '\n'
+        result += _SPLITTER. \
+            join([escape_str(str(column)) for column in sheet]) + '\n'
     try:
         with open(path, 'w') as csv_file:
             csv_file.write(result)
@@ -37,25 +34,26 @@ def load_csv(path: str) -> list:
         with open(path, 'r') as csv_file:
             csv: str = csv_file.read()
     except EnvironmentError:
-        return list()
+        return None
 
     rows: list = csv.split('\n')
-    for row in rows[1:]:
-        note_items = row.split('\t')
-        if len(note_items) != 5:
+    if rows[-1] == '':
+        rows.pop()
+    if len(rows) < 2:
+        return list()
+    for i in range(len(rows)):
+        rows[i] = rows[i].split(_SPLITTER)
+        if len(rows[i]) != 5:
             return list()
-        try:
-            note_id = uuid.UUID(note_items[0])
-            note_created = datetime.datetime.strptime(
-                note_items[1], '%Y-%m-%d %H:%M:%S')
-            note_modified = datetime.datetime.strptime(
-                note_items[2], '%Y-%m-%d %H:%M:%S')
-        except ValueError:
-            return list()
-        note_title = escape_str(note_items[3], True)
-        note_text = escape_str(note_items[4], True)
-        rows.append(note(note_id, note_created,
-                    note_modified, note_title, note_text))
+        if i != 0:
+            try:
+                rows[i][0] = int(rows[i][0])
+                rows[i][1] = float(rows[i][1])
+                rows[i][2] = float(rows[i][2])
+            except ValueError:
+                return None
+        rows[i][3] = escape_str(rows[i][3], True)
+        rows[i][4] = escape_str(rows[i][4], True)
     return rows
 
 
@@ -70,9 +68,9 @@ def escape_str(input_str: str, unescape: bool = False) -> str:
     '''
     _result: str = input_str
     _escape_chr: list = [
-        '&', '<', '>', '"', "'", '\t', '\n']
+        '&', '<', '>', '"', "'", '\t', '\n', _SPLITTER]
     _escape_seq: list = [
-        '&amp;', '&lt;', '&gt;', '&dquot;', '&squot;', '&tab;', '&br;']
+        '&amp;', '&lt;', '&gt;', '&dquot;', '&squot;', '&tab;', '&br;', '&splitter;']
     _escape_len = len(_escape_chr)
     for i in range(_escape_len):
         if not unescape:

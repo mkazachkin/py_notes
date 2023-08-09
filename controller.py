@@ -4,7 +4,7 @@ import datetime
 
 
 class notebook():
-    __slots__ = ['_sheets']
+    __slots__ = ['_nb']
 
     def __init__(self) -> None:
         '''
@@ -31,7 +31,16 @@ class notebook():
         self._nb.rem(id)
 
     def select_sheets(self, **kwargs) -> dict:
-        result = dict(self._nb)
+        '''
+        Производит выборку из словаря блокнота по заданным критериям.
+        Возвращает новый словарь.
+
+        Аргументы:
+            ids: list           - список идентификаторов записей
+            created_first: str  - начальная дата создания записи в формате "ГГГГ-ММ-ДД"
+            created_last: str   - конечная дата создания записи в формате "ГГГГ-ММ-ДД"
+        '''
+        result = dict(self._nb.sheets)
         if 'ids' in kwargs:
             result = {ids: result[ids]
                       for ids in kwargs.get('ids')
@@ -41,6 +50,7 @@ class notebook():
         last_date: float = datetime.datetime.now().timestamp()
         if 'created_first' in kwargs:
             try:
+                datetime.date.fromisoformat(kwargs.get('created_first'))
                 first_date = datetime.datetime.\
                     strptime(kwargs.get('created_first'),
                              '%Y-%m-%d').timestamp()
@@ -49,18 +59,24 @@ class notebook():
                 return dict()
         if 'created_last' in kwargs:
             try:
+                datetime.date.fromisoformat(kwargs.get('created_last'))
                 last_date = datetime.datetime.\
                     strptime(kwargs.get('created_last'),
-                             '%Y-%m-%d').timestamp()
+                             '%Y-%m-%d').timestamp() + 86399.9  # 23 часа 59,9 минут
                 flag = True
             except ValueError:
                 return dict()
         if flag:
-            result = {ids: result[ids]
-                      for ids in result.keys()
-                      if result[ids][0] >= first_date
-                      and result[ids][0] <= last_date}
+            result = {ids: result[ids] for ids in result.keys() if (
+                result[ids][0] >= first_date and result[ids][0] <= last_date)}
         return result
+
+    @property
+    def pages(self) -> int:
+        '''
+        Возвращает количество записей в блокноте
+        '''
+        return len(self._nb.sheets)
 
     def load_csv(self, path: str) -> bool:
         '''
@@ -71,9 +87,9 @@ class notebook():
         Аргументы:
             path: str       - путь к файлу
         '''
-        tmp_sheets = load_csv(path)
-        if len(tmp_sheets) != 0:
-            self._sheets = tmp_sheets
+        _nb: list = load_csv(path)
+        if _nb != None:
+            self._nb = sheets(sheets=self._list_to_nb(_nb))
             return True
         else:
             return False
@@ -86,4 +102,28 @@ class notebook():
         Аргументы:
             path: str       - путь к файлу
         '''
-        return save_csv(self._sheets, path)
+        return save_csv(self._nb_to_list(self._nb), path)
+
+    def _nb_to_list(self, nb: sheets) -> list:
+        '''
+        Конвертирует словарь блокнота в таблицу с заголовком
+
+        Аргументы:
+            nb: sheets  - словарь блокнота
+        '''
+        result = list()
+        result.append(nb.head)
+        for rec_id, rec_val in nb.sheets.items():
+            result.append(
+                [rec_id, rec_val[0], rec_val[1], rec_val[2], rec_val[3]])
+        return result
+
+    def _list_to_nb(self, nb: list) -> dict:
+        '''
+        Конвертирует таблицу с заголовком в словарь блокнота
+
+        Аргументы:
+            nb: list    - таблица блокнота
+        '''
+        nb.pop(0)
+        return {row[0]: [row[1], row[2], row[3], row[4]] for row in nb}
