@@ -215,7 +215,7 @@ class py_notes():
         Сохраняет путь к файлу с последним удачным сохранением, чтобы открыть его снова.
         '''
         try:
-            with open(self._cfg, 'w') as cfg_file:
+            with open(self._cfg, 'w', encoding='utf-8') as cfg_file:
                 cfg_file.write(self._notebook_path)
         except EnvironmentError:
             pass
@@ -225,7 +225,7 @@ class py_notes():
         Заргружает путь к файлу с последним удачным сохранением, чтобы открыть его снова.
         '''
         try:
-            with open(self._cfg, 'r') as cfg_file:
+            with open(self._cfg, 'r', encoding='utf-8') as cfg_file:
                 self._notebook_path = cfg_file.read()
         except EnvironmentError:
             self._notebook_path = ''

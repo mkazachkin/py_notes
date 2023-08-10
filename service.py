@@ -17,7 +17,7 @@ def save_csv(sheets: list, path: str) -> bool:
         result += _SPLITTER. \
             join([escape_str(str(column)) for column in sheet]) + '\n'
     try:
-        with open(path, 'w') as csv_file:
+        with open(path, 'w', encoding='utf-8') as csv_file:
             csv_file.write(result)
     except EnvironmentError:
         return False
@@ -33,7 +33,7 @@ def load_csv(path: str) -> list:
         path: str   - путь к файлу
     '''
     try:
-        with open(path, 'r') as csv_file:
+        with open(path, 'r', encoding='utf-8') as csv_file:
             csv: str = csv_file.read()
     except EnvironmentError:
         return None
