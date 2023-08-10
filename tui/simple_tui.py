@@ -67,10 +67,7 @@ class simple_tui():
             (self.width-len(yn_str))//2 + len(yn_str)).ljust(self.width)
         print((Fore.BLACK + Back.LIGHTRED_EX + ask_str + Style.RESET_ALL))
         print((Fore.BLACK + Back.LIGHTRED_EX + yn_str + Style.RESET_ALL))
-        if input().lower() == 'y':
-            return True
-        else:
-            return False
+        return input().lower() == 'y'
 
     def print_info(self, info_str: str, align: str = 'left', width: int = 0) -> None:
         '''
