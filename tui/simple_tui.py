@@ -62,7 +62,7 @@ class simple_tui():
             ask_str = 'Вы уверены?'
         ask_str = ask_str.rjust(
             (self.width-len(ask_str))//2 + len(ask_str)).ljust(self.width)
-        yn_str = '(Y/N)'
+        yn_str = '(y/N)'
         yn_str = yn_str.rjust(
             (self.width-len(yn_str))//2 + len(yn_str)).ljust(self.width)
         print((Fore.BLACK + Back.LIGHTRED_EX + ask_str + Style.RESET_ALL))
