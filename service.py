@@ -1,3 +1,5 @@
+import datetime
+
 _SPLITTER = '\t'
 
 
@@ -78,3 +80,10 @@ def escape_str(input_str: str, unescape: bool = False) -> str:
         else:
             _result = _result.replace(_escape_seq[i], _escape_chr[i])
     return _result
+
+
+def timestamp_to_str(timestamp: float) -> str:
+    '''
+    Преобразуем timestamp в строку
+    '''
+    return datetime.datetime.utcfromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M')

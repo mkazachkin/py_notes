@@ -30,15 +30,15 @@ class notebook():
         '''
         self._nb.rem(id)
 
-    def select_sheets(self, **kwargs) -> dict:
+    def select_sheets(self, **kwargs) -> dict[int, list]:
         '''
         Производит выборку из словаря блокнота по заданным критериям.
         Возвращает новый словарь.
 
         Аргументы:
-            ids: list           - список идентификаторов записей
-            created_first: str  - начальная дата создания записи в формате "ГГГГ-ММ-ДД"
-            created_last: str   - конечная дата создания записи в формате "ГГГГ-ММ-ДД"
+            ids: list[int]      - список идентификаторов записей
+            created_first: str  - начальная дата создания записи в формате 'ГГГГ-ММ-ДД'
+            created_last: str   - конечная дата создания записи в формате 'ГГГГ-ММ-ДД'
         '''
         result = dict(self._nb.sheets)
         if 'ids' in kwargs:
@@ -49,23 +49,13 @@ class notebook():
         first_date: float = 0.0
         last_date: float = datetime.datetime.now().timestamp()
         if 'created_first' in kwargs:
-            try:
-                datetime.date.fromisoformat(kwargs.get('created_first'))
-                first_date = datetime.datetime.\
-                    strptime(kwargs.get('created_first'),
-                             '%Y-%m-%d').timestamp()
-                flag = True
-            except ValueError:
-                return dict()
+            first_date = datetime.datetime.strptime(
+                kwargs.get('created_first'), '%Y-%m-%d').timestamp()
+            flag = True
         if 'created_last' in kwargs:
-            try:
-                datetime.date.fromisoformat(kwargs.get('created_last'))
-                last_date = datetime.datetime.\
-                    strptime(kwargs.get('created_last'),
-                             '%Y-%m-%d').timestamp() + 86399.9  # 23 часа 59,9 минут
-                flag = True
-            except ValueError:
-                return dict()
+            last_date = datetime.datetime.strptime(kwargs.get(
+                'created_last'), '%Y-%m-%d').timestamp() + 86399.9  # 23 часа 59,9 минут
+            flag = True
         if flag:
             result = {ids: result[ids] for ids in result.keys() if (
                 result[ids][0] >= first_date and result[ids][0] <= last_date)}
@@ -118,7 +108,7 @@ class notebook():
                 [rec_id, rec_val[0], rec_val[1], rec_val[2], rec_val[3]])
         return result
 
-    def _list_to_nb(self, nb: list) -> dict:
+    def _list_to_nb(self, nb: list) -> dict[int, list]:
         '''
         Конвертирует таблицу с заголовком в словарь блокнота
 

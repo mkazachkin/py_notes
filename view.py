@@ -1,70 +1,28 @@
 import os
 import datetime
+from tui.simple_tui import simple_tui
 from controller import notebook
-from colorama import init, Fore, Back, Style
+from service import timestamp_to_str
 
 
 class py_notes():
-    __slots__ = ['_nb', '_width', '_cfg', '_notebook_path']
+    __slots__ = ['_nb', '_cfg', '_notebook_path', '_tui', '_saved']
 
     def __init__(self):
-        init()
+        self._tui = simple_tui()
         self._nb = notebook()
-        self._width = os.get_terminal_size().columns
         self._cfg = os.path.join(os.path.dirname(
             os.path.realpath(__file__)), 'main.cfg')
         self._notebook_path = ''
-        try:
-            with open(self._cfg, 'r') as cfg_file:
-                self._notebook_path = cfg_file.read()
-        except EnvironmentError:
-            self.save_cfg(self)
+        self._load_cfg()
+        self._saved = True
         if self._notebook_path != '':
             self.load_from_csv(self._notebook_path)
 
-    def get_menu_choise(self, menu_items: dict, do_smth=lambda *args: None, vertical: bool = True, *args, **kwargs):
+    def main_screen(self) -> int:
         '''
-        Отображает пункты меню из словаря и возвращает идентификатор выбранного пункта меню
-
-        Аргументы:
-            menu_items: dict    - словарь пунктов меню, где ключами являются id пунктов
-            do_smth:            - функция, которая что-то делает после очистки экрана, но до отображения меню
+        Отображает главное меню
         '''
-        menu_keys = dict()
-        flag: bool = False
-        while not flag:
-            counter: int = 1
-            menu: str = ''
-            if not kwargs.get('donot_cls'):
-                self.cls()
-            if args:
-                do_smth(args)
-            else:
-                do_smth()
-            for key in menu_items.keys():
-                menu_keys[str(counter)] = key
-                menu += f' {counter}. {menu_items[key]}'
-                if vertical:
-                    menu += '\n'
-                else:
-                    menu += ' | '
-                counter += 1
-            menu += f' 0. Выход'
-            print(menu)
-            choise: str = input('Введите пункт меню: ')
-            if choise in menu_keys.keys():
-                flag = True
-            elif choise == '0':
-                return None
-        return menu_keys[choise]
-
-    def cls(self):
-        '''
-        Очищает консоль как в Windows, так и в *nix
-        '''
-        os.system('cls' if os.name == 'nt' else 'clear')
-
-    def main_menu(self) -> int:
         menu_items = {
             1: 'Добавить запись',
             2: 'Просмотреть все записи',
@@ -73,54 +31,29 @@ class py_notes():
             5: 'Указать путь к csv-файлу и сохранить данные',
             6: 'Сохранить',
         }
-        # В моей Alt Linux установлен "древний" Python 3.9, поэтому без match-case
+        # Без match-case, которые появились только в Python 3.11
         menu_choise = 0
         while menu_choise != None:
             if menu_choise == 1:
-                self.add_record()
+                self.add_record_screen()
             if menu_choise == 2:
-                self.records_menu()
+                self.selected_records_screen()
             if menu_choise == 3:
-                self.records_menu(ask_first_date=True, ask_last_date=True)
+                self.selected_records_screen(
+                    ask_first_date=True, ask_last_date=True)
             if menu_choise == 4:
                 self.load_from_csv()
             if menu_choise == 5:
                 self.save_to_csv()
             if menu_choise == 6:
                 self.save_to_csv(self._notebook_path)
-            info_str: str = ''
+
+            info_str = (f'Текущее количество записей: {self._nb.pages}\n')
             if self._notebook_path != '':
-                info_str += f'Файл БД: {self._notebook_path[12 - self._width//2:]} '.rjust(
-                    self._width)
-            info_str += (f'Текущее количество записей: {self._nb.pages} ').rjust(
-                self._width)
-            menu_choise = self.get_menu_choise(
-                menu_items, lambda *args: print(Fore.YELLOW + Back.LIGHTBLACK_EX + args[0][0] + Style.RESET_ALL), True, info_str)
+                info_str += f'Файл БД: {self._notebook_path}'
+            menu_choise = self._tui.get_menu_choise(menu_items, info_str)
 
-    def add_record(self, rec_id: int = -1) -> None:
-        '''
-        Выводит форму ввода записи и записывает ее в блокнот
-
-        Аргументы:
-            rec_id: int     - идентификатор записи, которую нужно заменить
-        '''
-        self.cls()
-        title: str = input('Введите заголовок записи: ')
-        print('Введите текст записи. Пустая строка означает окончание записи.')
-        text: str = ''
-        flag: bool = False
-        while not flag:
-            line = input()
-            if line:
-                text += line + '\n'
-            else:
-                flag = True
-        if rec_id < 0:
-            self._nb.add_sheet(title, text[:-1])
-        else:
-            self._nb.update_sheet(rec_id, title, text)
-
-    def records_menu(self, **kwargs) -> None:
+    def selected_records_screen(self, **kwargs) -> None:
         '''
         Выводит список записей.
 
@@ -128,10 +61,10 @@ class py_notes():
             ask_first_date: bool    - запрос начальной даты
             ask_last_date: bool     - запрос конечной даты
         '''
-        menu_choise = 0
         flag = False
         start_date = '1970-01-01'
         end_date = datetime.datetime.now().strftime('%Y-%m-%d')
+        self._tui.cls()
         if kwargs.get('ask_first_date') or kwargs.get('ask_last_date'):
             while not flag:
                 if kwargs.get('ask_first_date'):
@@ -150,45 +83,94 @@ class py_notes():
                     flag = True
                 except ValueError:
                     print('Неверный формат даты. Попробуйте еще раз.')
-        while menu_choise != None:
-            if not flag:
-                menu_choise = self.get_menu_choise(
-                    self.records_for_menu(self._nb.select_sheets()))
-            else:
-                menu_choise = self.get_menu_choise(
-                    self.records_for_menu(self._nb.select_sheets(created_first=start_date, created_last=end_date)))
-            if menu_choise != None:
-                self.show_record(menu_choise)
+        selected_sheets = dict[int, list]()
 
-    def records_for_menu(self, records: dict) -> dict:
-        for key in records.keys():
-            records[key] = self.timestamp_to_str(
-                records[key][0]) + '\t' + records[key][2][:10] + '...'
-        return records
-
-    def show_record(self, rec_id: int) -> None:
-        sheet = self._nb.select_sheets(ids=[rec_id])
-        self.cls()
-        print(Fore.WHITE + sheet[rec_id][2] + Fore.RESET + '\n')
-        print(sheet[rec_id][3] + '\n')
-        menu_items = {1: 'Редактировать', 2: 'Удалить'}
         menu_choise = 0
         while menu_choise != None:
-            info_string: str = (f'Дата создания: {self.timestamp_to_str(sheet[rec_id][0])} ' +
-                                f'Дата редактирования: {self.timestamp_to_str(sheet[rec_id][1])}').rjust(
-                self._width)
-            menu_choise = self.get_menu_choise(menu_items,
-                                               lambda *args: print(
-                                                   Fore.YELLOW + Back.LIGHTBLACK_EX + args[0][0] + Style.RESET_ALL),
-                                               False, info_string, donot_cls=True)
-            if menu_choise == 1:
-                self.add_record(rec_id)
-                menu_choise = None
-            if menu_choise == 2:
-                self.del_record(rec_id)
-                menu_choise = None
+            if flag:
+                selected_sheets = self._nb.select_sheets(
+                    created_first=start_date, created_last=end_date)
+            else:
+                selected_sheets = self._nb.select_sheets()
+            info_str = f'Найдено {len(selected_sheets)} записей'
+            menu_items = dict()
+            for key in selected_sheets.keys():
+                menu_items[key] = timestamp_to_str(
+                    selected_sheets[key][0]) + '\t' + selected_sheets[key][2][:10] + '...'
+            menu_choise = self._tui.get_menu_choise(menu_items, info_str)
             if menu_choise != None:
-                self.show_record(menu_choise)
+                self.record_screen(menu_choise)
+
+    def record_screen(self, rec_id: int) -> None:
+        '''
+        Отображает содержимое записи
+
+        Аргументы:
+            rec_id: int     - идентификатор записи
+        '''
+        menu_choise = 0
+        while menu_choise != None:
+            sheet = self._nb.select_sheets(ids=[rec_id])
+            self._tui.cls()
+            print(sheet[rec_id][2])
+            print('-'*self._tui.width)
+            print(sheet[rec_id][3])
+            print('-'*self._tui.width)
+            menu_items = {1: 'Редактировать', 2: 'Удалить'}
+            info_string: str = (f'Дата создания: {timestamp_to_str(sheet[rec_id][0])} | ' +
+                                f'Дата редактирования: {timestamp_to_str(sheet[rec_id][1])}')
+            menu_choise = self._tui.get_menu_choise(
+                menu_items, info_string, False, False)
+            if menu_choise == 1:
+                self.add_record_screen(rec_id)
+            elif menu_choise == 2:
+                if self.del_record_screen(rec_id):
+                    menu_choise = None
+            elif menu_choise != None:
+                self.record_screen(menu_choise)
+
+    def add_record_screen(self, rec_id: int = -1) -> None:
+        '''
+        Выводит форму ввода записи и записывает ее в блокнот
+
+        Аргументы:
+            rec_id: int     - идентификатор записи, которую нужно заменить
+        '''
+        self._tui.cls()
+        self._tui.print_info(
+            'Введите заголовок записи, после чего введите текст записи. Допускается ввод нескольких строк. ' +
+            'Для окончания ввода, введите пустую строку. Это очень длинная инструкция, поэтому она должна ' +
+            'автоматически разбиться на несколько строк и быть красивой.',
+            align='center')
+        title: str = input('Заголовок: ')
+        print('Текст:')
+        text: str = ''
+        flag: bool = False
+        while not flag:
+            line = input()
+            if line:
+                text += line + '\n'
+            else:
+                flag = True
+        if rec_id < 0:
+            self._nb.add_sheet(title, text[:-1])
+            self._saved = False
+        else:
+            self._nb.update_sheet(rec_id, title, text)
+            self._saved = False
+
+    def del_record_screen(self, rec_id: int) -> bool:
+        '''
+        Удаляет запись из блокнота. Возвращает информацию о том, была ли запись удалена или нет
+
+        Аргументы:
+            rec_id: int     - идентификатор записи
+        '''
+        flag = self._tui.get_yes_no_menu('Желаете удалить запись?')
+        if flag:
+            self._nb.remove_sheet(rec_id)
+            self._saved = False
+        return flag
 
     def save_to_csv(self, path: str = '') -> None:
         '''
@@ -200,9 +182,10 @@ class py_notes():
         if path == '':
             path = input('Введите путь к файлу: ')
         if self._nb.save_csv(path):
-            print('Файл успешно записан. Нажмите Enter.')
             self._notebook_path = path
-            self.save_cfg()
+            self._save_cfg()
+            self._saved = True
+            print('Файл успешно записан. Нажмите Enter.')
             input()
         else:
             print('Ошибка записи файла. Нажмите Enter.')
@@ -218,11 +201,16 @@ class py_notes():
         if path == '':
             path = input('Введите путь к файлу: ')
         if self._nb.load_csv(path):
+            self._notebook_path = path
+            self._save_cfg()
+            self._saved = True
             print('Блокнот успешно загужен.')
         else:
             print('Ошибка загрузки блокнота')
+            self._notebook_path = ''
+            self._save_cfg()
 
-    def save_cfg(self) -> None:
+    def _save_cfg(self) -> None:
         '''
         Сохраняет путь к файлу с последним удачным сохранением, чтобы открыть его снова.
         '''
@@ -230,13 +218,27 @@ class py_notes():
             with open(self._cfg, 'w') as cfg_file:
                 cfg_file.write(self._notebook_path)
         except EnvironmentError:
-            None
+            pass
 
-    def timestamp_to_str(self, timestamp: float) -> str:
+    def _load_cfg(self) -> None:
         '''
-        Преобразуем timestamp в строку
+        Заргружает путь к файлу с последним удачным сохранением, чтобы открыть его снова.
         '''
-        return datetime.datetime.utcfromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M')
+        try:
+            with open(self._cfg, 'r') as cfg_file:
+                self._notebook_path = cfg_file.read()
+        except EnvironmentError:
+            self._notebook_path = ''
+            self._save_cfg()
 
     def run(self):
-        self.main_menu()
+        '''
+        Запускает текстовый интерфейс приложения и само приложение
+        '''
+        flag = False
+        while not flag:
+            self.main_screen()
+            flag = self._saved
+            if not flag:
+                flag = self._tui.get_yes_no_menu(
+                    'Записи не сохранены. Все равно выйти?')
